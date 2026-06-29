@@ -1,7 +1,9 @@
+from datetime import datetime
 from urllib.parse import urlsplit, urlunsplit
 
+from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.config import settings
 
@@ -55,10 +57,6 @@ async def create_tables() -> None:
 
 
 # ── ORM Models ────────────────────────────────────────────────────────────────
-
-from datetime import datetime
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
-from sqlalchemy.orm import Mapped, mapped_column
 
 
 class TenantRow(Base):

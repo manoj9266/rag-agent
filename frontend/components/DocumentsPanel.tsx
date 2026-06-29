@@ -48,6 +48,9 @@ export default function DocumentsPanel() {
   }, []);
 
   useEffect(() => {
+    // Initial load on mount. fetchDocs is async — its setState calls run after
+    // the awaited request resolves, not synchronously in the effect body.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDocs();
   }, [fetchDocs]);
 

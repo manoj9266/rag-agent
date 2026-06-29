@@ -3,7 +3,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, UploadFile, status
+from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from google.genai.errors import ServerError
@@ -17,7 +17,7 @@ from app.agent import build_agent, run_agent
 from app.auth import create_access_token, get_tenant, hash_password, require_admin, verify_password
 from app.config import settings
 from app.database import DocumentRow, TenantRow, create_tables, get_db
-from app.ingest import SUPPORTED_EXTENSIONS, add_or_update_document, chunk_documents, delete_document, load_documents, run_ingest
+from app.ingest import SUPPORTED_EXTENSIONS, add_or_update_document, delete_document, run_ingest
 from app.logger import RequestLogMiddleware
 from app.models import (
     AuthResponse,
