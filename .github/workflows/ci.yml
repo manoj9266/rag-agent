@@ -20,7 +20,7 @@ jobs:
       DATABASE_URL: "sqlite+aiosqlite:///:memory:"
       REDIS_URL: redis://localhost:6379
       JWT_SECRET_KEY: ci-secret-key
-      ADMIN_KEY: ci-admin-key
+      ADMIN_KEY: test-admin-key  # must match X-Admin-Key used in tests/conftest.py
       VECTOR_BACKEND: faiss
 
     steps:
