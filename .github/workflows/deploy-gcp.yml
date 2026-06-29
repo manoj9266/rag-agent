@@ -1,0 +1,28 @@
+name: Deploy to GCP
+
+# Production deploys via Railway + Vercel (auto-deploy from GitHub on push to main).
+# This GCP-VM workflow is kept for reference / the alternative Option-B path. It is
+# manual-only so it does not fail on every push for lack of GCP secrets.
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: SSH deploy to GCP VM
+    runs-on: ubuntu-latest
+    needs: []        # remove if you want to gate on CI passing first
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host:     ${{ secrets.GCP_VM_HOST }}
+          username: ${{ secrets.GCP_VM_USER }}
+          key:      ${{ secrets.GCP_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/rag_agent
+            git pull origin main
+            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+            docker image prune -f
+            echo "Deploy complete at $(date)"

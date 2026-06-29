@@ -1,0 +1,26 @@
+# Tests are not needed in the runtime image
+tests/
+
+# Python caches / build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Local virtualenv
+.venv/
+venv/
+
+# Local runtime data (production uses a mounted volume)
+faiss_index/
+input_docs/
+
+# Env / secrets
+.env
+.env.*
+
+# OS noise
+.DS_Store
