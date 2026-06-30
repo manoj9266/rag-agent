@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     RELEVANCE_THRESHOLD: float = 0.5
     SESSION_TTL_SECONDS: int = 1800
     RATE_LIMIT: str = "30/minute"
+    MAX_FILE_SIZE_MB: int = 2
+    MAX_TENANT_STORAGE_MB: int = 10
     LOG_LEVEL: str = "INFO"
     LLM_MODEL: str = "gemini-2.5-flash"
 

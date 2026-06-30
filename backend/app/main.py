@@ -195,6 +195,18 @@ async def ingest(
     if ext not in SUPPORTED_EXTENSIONS:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported file type: {ext}")
 
+    content = await file.read()
+    max_file_bytes = settings.MAX_FILE_SIZE_MB * 1024 * 1024
+    if len(content) > max_file_bytes:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=f"File exceeds {settings.MAX_FILE_SIZE_MB} MB limit.")
+
+    total_used = await db.scalar(
+        select(func.sum(DocumentRow.size_bytes)).where(DocumentRow.tenant_id == tenant.tenant_id)
+    ) or 0
+    max_storage_bytes = settings.MAX_TENANT_STORAGE_MB * 1024 * 1024
+    if total_used + len(content) > max_storage_bytes:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=f"Storage limit of {settings.MAX_TENANT_STORAGE_MB} MB exceeded.")
+
     existing = await db.execute(
         select(DocumentRow).where(
             DocumentRow.tenant_id == tenant.tenant_id,
@@ -207,7 +219,6 @@ async def ingest(
     docs_dir = os.path.join(settings.INPUT_DOCS_PATH, tenant.tenant_id)
     os.makedirs(docs_dir, exist_ok=True)
     dest = os.path.join(docs_dir, file.filename)
-    content = await file.read()
     with open(dest, "wb") as f:
         f.write(content)
 
