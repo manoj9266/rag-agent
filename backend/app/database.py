@@ -9,31 +9,41 @@ from app.config import settings
 
 
 def _build_engine():
-    """Create the async engine, adding asyncpg/Neon-specific args only for Postgres.
+    """Create the async engine, adding asyncpg-specific args only for Postgres.
 
-    Neon (and most managed Postgres) require TLS, and asyncpg trips over libpq-only
-    query params (sslmode, channel_binding) plus prepared-statement caching when going
-    through a pooler. We strip those params and pass ssl/statement_cache_size via
-    connect_args. SQLite (used in CI/tests) gets none of this.
+    Two deployment shapes are supported:
+      * Self-hosted Postgres container (no TLS) — e.g. on the GCP VM. No ssl.
+      * Managed Postgres (Neon/Supabase) — requires TLS. We detect this from a
+        libpq sslmode that asks for it, then pass ssl via connect_args and strip
+        the libpq-only query params (sslmode, channel_binding) that asyncpg rejects.
+
+    `statement_cache_size=0` is harmless everywhere and is needed when going through
+    a transaction pooler (e.g. Neon's -pooler / PgBouncer). SQLite (CI/tests) gets none
+    of this.
     """
     url = settings.DATABASE_URL
     if "asyncpg" not in url:
         return create_async_engine(url, echo=False)
 
-    # asyncpg.connect() rejects libpq keywords; drop them from the query string.
     parts = urlsplit(url)
-    kept = [
-        kv
-        for kv in parts.query.split("&")
-        if kv and kv.split("=", 1)[0] not in {"sslmode", "channel_binding"}
-    ]
-    clean_url = urlunsplit(parts._replace(query="&".join(kept)))
+    query = dict(kv.split("=", 1) for kv in parts.query.split("&") if "=" in kv)
+    # TLS only when the connection string asks for it (managed Postgres), not for a
+    # plain self-hosted container which has no SSL configured.
+    want_ssl = query.get("sslmode", "").lower() in {"require", "verify-ca", "verify-full"}
+
+    # asyncpg.connect() rejects libpq keywords; drop them from the query string.
+    kept = "&".join(f"{k}={v}" for k, v in query.items() if k not in {"sslmode", "channel_binding"})
+    clean_url = urlunsplit(parts._replace(query=kept))
+
+    connect_args: dict = {"statement_cache_size": 0}
+    if want_ssl:
+        connect_args["ssl"] = True
 
     return create_async_engine(
         clean_url,
         echo=False,
-        pool_pre_ping=True,  # drop stale conns after Neon compute auto-suspend
-        connect_args={"ssl": True, "statement_cache_size": 0},
+        pool_pre_ping=True,  # drop stale conns (managed-DB auto-suspend, idle drops)
+        connect_args=connect_args,
     )
 
 
