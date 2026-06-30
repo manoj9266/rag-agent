@@ -23,6 +23,9 @@ export default function UploadZone({ onUploaded }: Props) {
     if (!ACCEPTED.includes(ext)) {
       return `Unsupported type. Accepted: ${ACCEPTED.join(", ")}`;
     }
+    if (f.size > 2 * 1024 * 1024) {
+      return "File exceeds the 2 MB limit.";
+    }
     return "";
   }
 
@@ -84,7 +87,7 @@ export default function UploadZone({ onUploaded }: Props) {
           Drag & drop or <span className="text-indigo-600">browse</span>
         </p>
         <p className="text-xs text-gray-400 mt-1">
-          {ACCEPTED.join(", ")} supported
+          {ACCEPTED.join(", ")} · max 2 MB per file · 10 MB total
         </p>
         <input
           ref={inputRef}
