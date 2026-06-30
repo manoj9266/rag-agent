@@ -1,14 +1,10 @@
-# Production stack for deployment ALONGSIDE an existing host (e.g. the diltalks GCP VM).
+# Production stack for GCP VM deployment.
 #
-# Design for coexistence:
-#   * No nginx here — the host's own nginx reverse-proxies a subdomain to this app.
-#   * app is published ONLY on 127.0.0.1:8000 (loopback) — never exposed publicly.
-#   * postgres + redis are internal to this compose network — no host ports, so they
-#     cannot collide with anything else already running on the box.
-#   * A fixed project name (`rag-agent`) keeps container names distinct from other stacks.
+# Postgres is managed externally by Neon — set DATABASE_URL in .env.prod.
+# Redis runs as a container (internal network only).
+# app is published on 127.0.0.1:8000 — host nginx reverse-proxies to it.
 #
-# Deploy:  sudo docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
-# (--env-file makes ${POSTGRES_*} below substitute from .env.prod.)
+# Deploy:  docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 
 name: rag-agent
 
@@ -20,38 +16,21 @@ services:
         REQUIREMENTS: requirements-prod.txt   # slim image; Gemini embeddings only
     env_file: .env.prod
     environment:
-      PORT: "8000"
+      PORT: "8010"
     ports:
-      - "127.0.0.1:8000:8000"                  # loopback only — host nginx proxies to this
+      - "127.0.0.1:8010:8010"
     volumes:
       - ./data:/data                           # FAISS indexes + uploaded docs (persistent)
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_started
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8010/v1/health')"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 40s
-
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-ragagent}
-      POSTGRES_USER: ${POSTGRES_USER:-raguser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env.prod}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-raguser} -d ${POSTGRES_DB:-ragagent}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -61,5 +40,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  pgdata:
   redisdata:
